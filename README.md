@@ -96,9 +96,13 @@ Directories and main files on a tree architecture description
 │
 ├── docker
 │   └── nginx-php
-│       ├── ...
-│       ├── .env.example
-│       └── docker-compose.yml
+│       └── docker
+│       │   ├── config
+│       │   ├── .env
+│       │   ├── docker-compose.yml
+│       │   └── Dockerfile
+│       │
+│       └── Makefile
 │
 ├── resources
 │   ├── database
