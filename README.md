@@ -4,21 +4,13 @@
     </a>
 </div>
 
-<div style="width:100%;float:left;clear:both;margin-bottom:50px;">
-    <a href="resources/doc/symfony-7-installation-screenshot.png">
-        <img style="width:100%;float:left;" src="resources/doc/symfony-7-installation-screenshot.png"/>
-    </a>
-</div>
-
 # Docker Symfony 7 with PHP FPM 8+
 
-The objective of this repository is having a CaaS [Containers as a Service](https://www.ibm.com/topics/containers-as-a-service) to provide a start up application with the basic enviroment features to deploy a php service running with Nginx and PHP-FPM in a container for [Symfony](https://symfony.com/) and another container with a MySQL database to follow the best practices on an easy scenario to understand and modify on development requirements.
+The objective of this repository is having a CaaS [Containers as a Service](https://www.ibm.com/topics/containers-as-a-service) to provide a "ready to use" container with the basic enviroment features to deploy a [Symfony](https://symfony.com/) application service under a lightweight Linux Alpine image with Nginx server platform and [PHP-FPM](https://www.php.net/manual/en/install.fpm.php) for development stage requirements.
 
-The connection between container is as [Host Network](https://docs.docker.com/network/drivers/host/) on `eth0`, thus both containers do not share networking or bridge configuration.
+The container configuration is as [Host Network](https://docs.docker.com/network/drivers/host/) on `eth0` as [Bridge network](https://docs.docker.com/network/drivers/bridge/), thus it can be accessed through `localhost:${PORT}` by browsers but to connect with it or this with other services `${HOSTNAME}:${PORT}` will be required.
 
-As client end user both services can be accessed through `localhost:${PORT}` but the connection between containers is through the `${HOSTNAME}:${PORT}`.
-
-### Symfony Docker Container Service
+### Symfony Container Service
 
 - [Symfony 7](https://symfony.com/doc/7.0/setup.html)
 
@@ -28,9 +20,11 @@ As client end user both services can be accessed through `localhost:${PORT}` but
 
 - [Alpine Linux 3.19](https://www.alpinelinux.org/)
 
-### Database Container Service
+### Database Service
 
-To connect this service to a SQL database, it can be used the following [MariaDB 10.11](https://mariadb.com/kb/en/changes-improvements-in-mariadb-1011/) service:
+This project does not include a database service for it is intended to connect to a database instance like in a cloud database environment or similar.
+
+To emulate a SQL database service it can be used the following [MariaDB 10.11](https://mariadb.com/kb/en/changes-improvements-in-mariadb-1011/) repository:
 - [https://github.com/pabloripoll/docker-mariadb-10.11](https://github.com/pabloripoll/docker-mariadb-10.11)
 
 ### Project objetives with Docker
@@ -48,7 +42,7 @@ To connect this service to a SQL database, it can be used the following [MariaDB
 
 #### PHP config
 
-To use a different PHP 8 version the following [Dockerfile](docker/nginx-php/docker/Dockerfile) arguments and variable has to be modified:
+To use a different PHP 8 version the following [Dockerfile](docker/nginx-php/docker/Dockerfile) arguments and variable must be modified:
 ```Dockerfile
 ARG PHP_VERSION=8.3
 ARG PHP_ALPINE=83
@@ -56,7 +50,7 @@ ARG PHP_ALPINE=83
 ENV PHP_V="php83"
 ```
 
-Also, it has to be informed to [Supervisor Config](docker/nginx-php/docker/config/supervisord.conf) the PHP-FPM version to run.
+And must be inform to [Supervisor Config](docker/nginx-php/docker/config/supervisord.conf) the FPM version to run.
 ```bash
 ...
 [program:php-fpm]
@@ -135,96 +129,185 @@ $ make help
 usage: make [target]
 
 targets:
-Makefile  help                     shows this Makefile help message
-Makefile  hostname                 shows local machine ip
-Makefile  fix-permission           sets project directory permission
-Makefile  ports-check              shows this project ports availability on local machine
-Makefile  symfony-ssh              enters the Symfony container shell
-Makefile  symfony-set              sets the Symfony PHP enviroment file to build the container
-Makefile  symfony-build            builds the Symfony PHP container from Docker image
-Makefile  symfony-start            starts up the Symfony PHP container running
-Makefile  symfony-stop             stops the Symfony PHP container but data will not be destroyed
-Makefile  symfony-destroy          stops and removes the Symfony PHP container from Docker network destroying its data
-Makefile  repo-flush               clears local git repository cache specially to update .gitignore
+Makefile  help                    shows this Makefile help message
+Makefile  hostname                shows local machine ip
+Makefile  fix-permission          sets project directory permission
+Makefile  host-check              shows this project ports availability on local machine
+Makefile  symfony-ssh             enters the application container shell
+Makefile  symfony-set             sets the application PHP enviroment file to build the container
+Makefile  symfony-create          creates the application PHP container from Docker image
+Makefile  symfony-start           starts the application PHP container running
+Makefile  symfony-stop            stops the application PHP container but data will not be destroyed
+Makefile  symfony-destroy         removes the application PHP from Docker network destroying its data and Docker image
+Makefile  symfony-install         installs the application pre-defined version with its dependency packages into container
+Makefile  symfony-update          updates the application dependency packages into container
+Makefile  database-install        installs into container database the init sql file from resources/database
+Makefile  database-replace        replaces container database with the latest sql backup file from resources/database
+Makefile  database-backup         creates / replace a sql backup file from container database in resources/database
+Makefile  repo-flush              clears local git repository cache specially to update .gitignore
 ```
 
-Checkout local machine ports availability
+## Service Configuration
+
+Create a [DOTENV](.env) file from [.env.example](.env.example) and setup according to your project requirement the following variables
+```
+# REMOVE COMMENTS WHEN COPY THIS FILE
+
+# Leave it empty if no need for sudo user to execute docker commands
+DOCKER_USER=sudo
+
+# Container data for docker-compose.yml
+PROJECT_TITLE="SYMFONY"   # <- this name will be prompt for Makefile recipes
+PROJECT_ABBR="symfony"    # <- part of the service image tag - useful if similar services are running
+
+# Symfony container
+PROJECT_HOST="127.0.0.1"                    # <- for this project is not necessary
+PROJECT_PORT="8888"                         # <- port access container service on local machine
+PROJECT_CAAS="symfony-app"                  # <- container as a service name to build service
+PROJECT_PATH="../../../symfony"             # <- path where application is binded from container to local
+
+# Database service container
+DB_CAAS="mariadb"                           # <- name of the database docker container service to access by ssh
+DB_NAME="mariadb"                           # <- name of the database to copy or replace
+DB_ROOT="7c4a8d09ca3762af61e59520943d"      # <- database root password
+DB_BACKUP_NAME="symfony"                    # <- the name of the database backup or copy file
+DB_BACKUP_PATH="resources/database"         # <- path where database backup or copy resides
+```
+
+Exacute the following command to create the [docker/.env](docker/.env) file, required for building the container
 ```bash
-$ make ports-check
+$ make symfony-set
+SYMFONY docker-compose.yml .env file has been set.
+```
+
+Checkout port availability from the set enviroment
+```bash
+$ make host-check
 
 Checking configuration for SYMFONY container:
 SYMFONY > port:8888 is free to use.
 ```
 
-Checkout local machine IP to set connection between containers using the following makefile recipe
+Checkout local machine IP to set connection between container services using the following makefile recipe if required
 ```bash
 $ make hostname
 
 192.168.1.41
 ```
 
-## Build the project
+## Create the application container service
 
 ```bash
-$ make project-build
+$ make symfony-create
 
-SYMFONY docker-compose.yml .env file has been set.
+symfony docker-compose.yml .env file has been set.
 
-[+] Building 31.5s (25/25)                                             docker:default
- => [wordpress internal] load build definition from Dockerfile         0.0s
- => => transferring dockerfile: 2.47kB
+[+] Building 54.3s (26/26) FINISHED                                                 docker:default
+=> [nginx-php internal] load build definition from Dockerfile                       0.0s
+ => => transferring dockerfile: 2.78kB                                              0.0s
+ => [nginx-php internal] load metadata for docker.io/library/composer:latest        1.5s
+ => [nginx-php internal] load metadata for docker.io/library/php:8.3-fpm-alpine     1.5s
+ => [nginx-php internal] load .dockerignore                                         0.0s
+ => => transferring context: 108B                                                   0.0s
+ => [nginx-php internal] load build context                                         0.0s
+ => => transferring context: 8.30kB                                                 0.0s
+ => [nginx-php] FROM docker.io/library/composer:latest@sha256:63c0f08ca41370...
 ...
-=> => naming to docker.io/library/symfony-app:php-8.3                  0.0s
+ => [nginx-php] exporting to image                                                  1.0s
+ => => exporting layers                                                             1.0s
+ => => writing image sha256:3c99f91a63edd857a0eaa13503c00d500fad57cf5e29ce1d...     0.0s
+ => => naming to docker.io/library/symfony-app:symfony-nginx-php                    0.0s
 [+] Running 1/2
- ⠇ Network symfony-app_default  Created                                0.8s
- ✔ Container symfony-app        Started
+ ⠴ Network symfony-app_default  Created                                             0.4s
+ ✔ Container symfony-app        Started                                             0.3s
+[+] Running 1/0
+ ✔ Container symfony-app        Running
 ```
 
-## Running the project
+If container service has been built with the application content completed, accessing by browsing [http://localhost:8888/](http://localhost:8888/) will display the successful installation welcome page.
 
+If container has been built without application, the following Makefile recipe will install the application that is configure in [docker/nginx-php/Makefile](docker/nginx-php/Makefile) service
 ```bash
-$ make project-start
+$ make symfony-install
+```
 
-[+] Running 1/0
- ✔ Container symfony-db  Running                       0.0s
-[+] Running 1/0
- ✔ Container symfony-app  Running                      0.0s
- ```
+If container has been built with the application copy from repository, the following Makefile recipe will update the application dependencies
+```bash
+$ make symfony-update
+```
 
-Now, Symfony should be available on local machine by visiting [http://localhost:8888/](http://localhost:8888/)
+## Container Information
 
-## Docker Info
-
-Docker container
+Running container on Docker
 ```bash
 $ sudo docker ps -a
 CONTAINER ID   IMAGE      COMMAND    CREATED      STATUS      PORTS                                             NAMES
-ecd27aeae010   symf...   "docker-php-entrypoi…"   3 mins...   9000/tcp, 0.0.0.0:8888->80/tcp, :::8888->80/tcp   symfony-app
-
+ecd27aeae010   symf...    "docker-php-entrypoi…"  1 min...    9000/tcp, 0.0.0.0:8888->80/tcp, :::8888->80/tcp   symfony-app
 ```
 
-Docker image
+Docker image size
 ```bash
 $ sudo docker images
 REPOSITORY   TAG           IMAGE ID       CREATED         SIZE
-symfony-app  symf...       373f6967199b   5 minutes ago   200MB
+symfony-app  symf...       373f6967199b   5 minutes ago   251MB
 ```
 
-Docker stats
+Stats regarding the amount of disk space used by the container
 ```bash
 $ sudo docker system df
 TYPE            TOTAL     ACTIVE    SIZE      RECLAIMABLE
-Images          1         1         532.2MB   0B (0%)
-Containers      1         1         25.03kB   0B (0%)
+Images          1         1         251.4MB   0B (0%)
+Containers      1         1         4B        0B (0%)
 Local Volumes   1         0         117.9MB   117.9MB (100%)
-Build Cache     39        0         10.21kB   10.21kB
+Build Cache     39        0         10.56kB   10.56kB
 ```
 
-## Check Symfony status
+## Stopping the Container Service
 
-Visiting `http://localhost:8888/` should display Symfony's welcome page.
+Using the following Makefile recipe stops application from running, keeping database persistance and application files binded without any loss
+```bash
+$ make symfony-stop
+[+] Stopping 1/1
+ ✔ Container symfony-app  Stopped                                                    0.5s
+```
 
-Use an API platform *(Postman, Firefox RESTClient, etc..)* to check connection with Symfony
+## Removing the Container Image
+
+To remove application container from Docker network use the following Makefile recipe *(Docker prune commands still needed to be applied manually)*
+```bash
+$ make symfony-destroy
+
+[+] Removing 1/0
+ ✔ Container symfony-app  Removed                                                     0.0s
+[+] Running 1/1
+ ✔ Network symfony-app_default  Removed                                               0.4s
+Untagged: symfony-app:symfony-nginx-php
+Deleted: sha256:3c99f91a63edd857a0eaa13503c00d500fad57cf5e29ce1da3210765259c35b1
+```
+
+Information on pruning Docker system cache
+```bash
+$ sudo docker system prune
+
+...
+Total reclaimed space: 168.4MB
+```
+
+Information on pruning Docker volume cache
+```bash
+$ sudo docker system prune
+
+...
+Total reclaimed space: 0MB
+```
+
+## Symfony service check
+
+There are two PHP files on [resources/symfony](resources/symfony) with same structure as application to replace or add a predifined example to test the service.
+
+It can be used an API platform service *(Postman, Firefox RESTClient, etc..)* or just browsing the following endpoints to check connection with Symfony.
+
+Check-out a basic service check
 ```
 GET: http://localhost:8888/api/v1/health
 
@@ -233,9 +316,7 @@ GET: http://localhost:8888/api/v1/health
 }
 ```
 
-## Check Symfony database connection
-
-Check connection to database through a test endpoint. If conenction params are not set already will response as follows
+Check connection to database through this endpoint. If conenction params are not set already or does not exist, endpoint response will be as follow
 ```
 GET: http://localhost:8888/api/v1/health/db
 
@@ -246,12 +327,7 @@ GET: http://localhost:8888/api/v1/health/db
 }
 ```
 
-Complete the MySQL database connection params. Use local hostname IP `$ make hostname` to set `IP` param
-```
-DATABASE_URL="mysql://symfony:123456@192.168.1.41:8889/symfony?serverVersion=10.11.2-MariaDB&charset=utf8mb4"
-```
-
-Checking the connection to database once is set correctly will response as follows
+When a proper connection is set, endpoint will response as follow
 ```
 GET: http://localhost:8888/api/v1/health/db
 
@@ -260,46 +336,68 @@ GET: http://localhost:8888/api/v1/health/db
 }
 ```
 
-## Stop Containers
+## Custom database service usage
 
-Using the following Makefile recipe stops application and database containers, keeping database persistance and application files binded without any loss
-```bash
-$ make project-stop
+In case of using the repository [https://github.com/pabloripoll/docker-mariadb-10.11](https://github.com/pabloripoll/docker-mariadb-10.11) as database service, complete the application mysql database connection params in [symfony/.env](symfony/.env) file.
 
-[+] Killing 1/1
- ✔ Container symfony-app  Killed              0.5s
-Going to remove symfony-app
-[+] Removing 1/0
- ✔ Container symfony-app  Removed             0.0s
+Use local hostname IP `$ make hostname` to set `DB_HOST` variable
+```
+DATABASE_URL="mysql://mariadb:123456@192.168.1.41:8880/mariadb?serverVersion=10.11.2-MariaDB&charset=utf8mb4"
 ```
 
-## Remove Containers
-
-To stop and remove both application and database containers from docker network use the following Makefile recipe
+Migration has to be performed inside container. Access container with the following recipe:
 ```bash
-$ make project-destroy
-
-[+] Killing 1/1
- ✔ Container symfony-app  Killed                   0.4s
-Going to remove symfony-app
-[+] Removing 1/0
- ✔ Container symfony-app  Removed                  0.0s
-[+] Running 1/1
- ✔ Network symfony-app_default  Removed
+$ make symfony-ssh
 ```
 
-Prune Docker system cache
-```bash
-$ sudo docker system prune
+### Dumping Database
 
-...
-Total reclaimed space: 423.4MB
+Every time the containers are built up and running it will be like start from a fresh installation.
+
+You can continue using this repository with the pre-set database executing the command `$ make database-install`
+
+Follow the next recommendations to keep development stages clear and safe.
+
+*On first installation* once the app service is running with basic tables set, I suggest to make a initialization database backup manually, saving as [resources/database/symfony-backup.sql](resources/database/symfony-backup.sql) but renaming as [resources/database/symfony-init.sql](resources/database/symfony-init.sql) to have that init database for any Docker compose rebuild / restart on next time.
+
+**The following three commands are very useful for *Continue Development*.**
+
+### DB Backup
+
+When the project is already in an advanced development stage, making a backup is recommended to keep lastest database registers.
+```bash
+$ make database-backup
+
+DATABASE backup has been created.
 ```
 
-Prune Docker volume cache
-```bash
-$ sudo docker system prune
+### DB Install
 
-...
-Total reclaimed space: 50.7MB
+If it is needed to restart the project from base installation step, you can use the init database .sql file to restart at that point in time. Although is not common to use, helps to check and test installation health.
+```bash
+$ make database-install
+
+DATABASE has been installed.
+```
+
+This repository comes with an initialized .sql with a main database user. See [.env.example](.env.example)
+
+### DB Replace
+
+Replace the database set on container with the latest .sql backup into current development stage.
+```bash
+$ make database-replace
+
+DATABASE has been replaced.
+```
+
+#### Notes
+
+- Notice that both files in [resources/database/](resources/database/) have the name that has been set on the main `.env` file to automate processes.
+
+- Remember that on any change in the main `.env` file will be required to execute the following Makefile recipe
+```bash
+$ make symfony-set
+
+SYMFONY docker-compose.yml .env file has been set.
 ```
