@@ -85,6 +85,11 @@ RUN apk add --no-cache \
 # PHP Docker
 RUN docker-php-ext-install pdo pdo_mysql gd
 
+# PHP PECL extensions
+RUN apk add \
+  ${PHP_V}-pecl-amqp \
+  ${PHP_V}-pecl-xdebug
+
 # Configure nginx - http
 COPY config/nginx.conf /etc/nginx/nginx.conf
 
@@ -103,7 +108,6 @@ RUN chown -R docker.docker /var/www/html /run /var/lib/nginx /var/log/nginx
 
 # PHP Composer
 COPY --from=composer:latest /usr/bin/composer /usr/local/bin/composer
-# ERROR file_put_contents(./composer.lock): Failed to open stream: Permission denied
 
 # Create symlink for php
 RUN ln -s /usr/bin/${PHP_V} /usr/bin/php
