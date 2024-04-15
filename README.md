@@ -58,29 +58,106 @@ command=php-fpm83 -F
 ...
 ```
 
-## Structure
+## Dockerfile insight
+```
+# Install main packages and remove default server definition
+RUN apk add --no-cache \
+  curl \
+  wget \
+  nginx \
+  curl \
+  zip \
+  bash \
+  vim \
+  git \
+  supervisor
 
-Directories and main files on a tree architecture description
+RUN set -xe \
+    && apk add --no-cache --virtual .build-deps \
+        libzip-dev \
+        freetype-dev \
+        icu-dev \
+        libmcrypt-dev \
+        libjpeg-turbo-dev \
+        libpng-dev \
+        libxslt-dev \
+        patch \
+        openssh-client
+
+# Install PHP and its extensions packages and remove default server definition
+ENV PHP_V="php83"
+
+RUN apk add --no-cache \
+  ${PHP_V} \
+  ${PHP_V}-cli \
+  ${PHP_V}-ctype \
+  ${PHP_V}-curl \
+  ${PHP_V}-dom \
+  ${PHP_V}-fileinfo \
+  ${PHP_V}-fpm \
+  ${PHP_V}-gd \
+  ${PHP_V}-intl \
+  ${PHP_V}-mbstring \
+  ${PHP_V}-opcache \
+  ${PHP_V}-openssl \
+  ${PHP_V}-phar \
+  ${PHP_V}-session \
+  ${PHP_V}-tokenizer \
+  ${PHP_V}-soap \
+  ${PHP_V}-xml \
+  ${PHP_V}-xmlreader \
+  ${PHP_V}-xmlwriter \
+  ${PHP_V}-simplexml \
+  ${PHP_V}-zip \
+  # Databases
+  ${PHP_V}-pdo \
+  ${PHP_V}-pdo_sqlite \
+  ${PHP_V}-sqlite3 \
+  ${PHP_V}-pdo_mysql \
+  ${PHP_V}-mysqlnd \
+  ${PHP_V}-mysqli \
+  ${PHP_V}-pdo_pgsql \
+  ${PHP_V}-pgsql \
+  ${PHP_V}-mongodb \
+  ${PHP_V}-redis
+
+# PHP Docker
+RUN docker-php-ext-install pdo pdo_mysql gd
+
+# PHP PECL extensions
+RUN apk add \
+  ${PHP_V}-pecl-amqp \
+  ${PHP_V}-pecl-xdebug
+```
+
+## Directories Structure
+
+Directories and main files on a tree architecture description. Main `/docker` directory has `/nginx-php` directory separated in case of needing to be included other container service directory with its specific contents
 ```
 .
 │
 ├── docker
-│   └── nginx-php
-│       └── docker
-│       │   ├── config
-│       │   ├── .env
-│       │   ├── docker-compose.yml
-│       │   └── Dockerfile
-│       │
-│       └── Makefile
+│   ├── nginx-php
+│   │   ├── docker
+│   │   │   ├── config
+│   │   │   ├── .env
+│   │   │   ├── docker-compose.yml
+│   │   │   └── Dockerfile
+│   │   │
+│   │   └── Makefile
+│   │
+│   └── (other...)
 │
 ├── resources
 │   ├── database
 │   │   ├── symfony-init.sql
 │   │   └── symfony-backup.sql
 │   │
+│   ├── doc
+│   │   └── (any documentary file...)
+│   │
 │   └── symfony
-│       └── (any file or directory required for re-building the app...)
+│       └── (any file or directory required for start-up or re-building the app...)
 │
 ├── symfony
 │   └── (application...)
@@ -119,6 +196,7 @@ Makefile  database-install        installs into container database the init sql 
 Makefile  database-replace        replaces container database with the latest sql backup file from resources/database
 Makefile  database-backup         creates / replace a sql backup file from container database in resources/database
 Makefile  repo-flush              clears local git repository cache specially to update .gitignore
+Makefile  repo-commit             echoes commit helper commands
 ```
 
 ## Service Configuration
@@ -148,6 +226,8 @@ DB_BACKUP_NAME="symfony"                    # <- the name of the database backup
 DB_BACKUP_PATH="resources/database"         # <- path where database backup or copy resides
 ```
 
+*(Database service container is explained [below](https://github.com/pabloripoll/docker-symfony-6-php-fpm-8?tab=readme-ov-file#custom-database-service-usage))*
+
 Exacute the following command to create the [docker/.env](docker/.env) file, required for building the container
 ```bash
 $ make symfony-set
@@ -174,9 +254,9 @@ $ make hostname
 ```bash
 $ make symfony-create
 
-symfony docker-compose.yml .env file has been set.
+SYMFONY docker-compose.yml .env file has been set.
 
-[+] Building 54.3s (26/26) FINISHED                                                 docker:default
+[+] Building 54.3s (26/26) FINISHED                                       docker:default
 => [nginx-php internal] load build definition from Dockerfile                       0.0s
  => => transferring dockerfile: 2.78kB                                              0.0s
  => [nginx-php internal] load metadata for docker.io/library/composer:latest        1.5s
@@ -198,26 +278,21 @@ symfony docker-compose.yml .env file has been set.
  ✔ Container symfony-app        Running
 ```
 
-If container service has been built with the application content completed, accessing by browsing [http://localhost:8888/](http://localhost:8888/) will display the successful installation welcome page.
+## Project Service
 
-If container has been built without application, the following Makefile recipe will install the application that is configure in [docker/nginx-php/Makefile](docker/nginx-php/Makefile) service
-```bash
-$ make symfony-install
-```
+If the container is built with the pre-installed application content, by browsing to localhost with the selected port configured [http://localhost:8888/](http://localhost:8888/) will display the successfully installation welcome page.
 
-If container has been built with the application copy from repository, the following Makefile recipe will update the application dependencies
+The pre-installed application could require to update its dependencies. The following Makefile recipe will update dependencies set on `composer.json` file
 ```bash
 $ make symfony-update
 ```
 
-## Container Information
-
-Running container on Docker
+If it is needed to build the container with other type of application configuration from base, there is a Makefile recipe to set at [docker/Makefile](docker/Makefile) all the commands needed for its installation.
 ```bash
-$ sudo docker ps -a
-CONTAINER ID   IMAGE      COMMAND    CREATED      STATUS      PORTS                                             NAMES
-ecd27aeae010   symf...    "docker-php-entrypoi…"  1 min...    9000/tcp, 0.0.0.0:8888->80/tcp, :::8888->80/tcp   symfony-app
+$ make symfony-install
 ```
+
+## Container Information
 
 Docker image size
 ```bash
@@ -374,4 +449,36 @@ DATABASE has been replaced.
 $ make symfony-set
 
 SYMFONY docker-compose.yml .env file has been set.
+```
+
+## Connection between containers
+
+#### On Windows systems
+
+This project has not been tested on Windows OS neither I can use it to test it. So, I cannot bring much support on it.
+
+Anyway, using this repository you will needed to find out your PC IP by login as an `administrator user` to set connection between containers.
+
+```bash
+C:\WINDOWS\system32>ipconfig /all
+
+Windows IP Configuration
+
+ Host Name . . . . . . . . . . . . : 191.128.1.41
+ Primary Dns Suffix. . . . . . . . : paul.ad.cmu.edu
+ Node Type . . . . . . . . . . . . : Peer-Peer
+ IP Routing Enabled. . . . . . . . : No
+ WINS Proxy Enabled. . . . . . . . : No
+ DNS Suffix Search List. . . . . . : scs.ad.cs.cmu.edu
+```
+
+Take the first ip listed. Wordpress container will connect with database container using that IP.
+
+#### On Unix based systems
+
+Find out your IP on UNIX systems and take the first IP listed
+```bash
+$ hostname -I
+
+191.128.1.41 172.17.0.1 172.20.0.1 172.21.0.1
 ```
