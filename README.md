@@ -58,36 +58,6 @@ command=php-fpm83 -F
 ...
 ```
 
-#### Containers on Windows systems
-
-This project has not been tested on Windows OS neither I can use it to test it. So, I cannot bring much support on it.
-
-Anyway, using this repository you will needed to find out your PC IP by login as an `administrator user` to set connection between containers.
-
-```bash
-C:\WINDOWS\system32>ipconfig /all
-
-Windows IP Configuration
-
- Host Name . . . . . . . . . . . . : 191.128.1.41
- Primary Dns Suffix. . . . . . . . : paul.ad.cmu.edu
- Node Type . . . . . . . . . . . . : Peer-Peer
- IP Routing Enabled. . . . . . . . : No
- WINS Proxy Enabled. . . . . . . . : No
- DNS Suffix Search List. . . . . . : scs.ad.cs.cmu.edu
-```
-
-Take the first ip listed. Wordpress container will connect with database container using that IP.
-
-#### Containers on Unix based systems
-
-Find out your IP on UNIX systems and take the first IP listed
-```bash
-$ hostname -I
-
-191.128.1.41 172.17.0.1 172.20.0.1 172.21.0.1
-```
-
 ## Structure
 
 Directories and main files on a tree architecture description
