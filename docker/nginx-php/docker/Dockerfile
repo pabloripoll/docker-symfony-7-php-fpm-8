@@ -110,7 +110,7 @@ RUN chown -R docker.docker /var/www/html /run /var/lib/nginx /var/log/nginx
 COPY --from=composer:latest /usr/bin/composer /usr/local/bin/composer
 
 # Create symlink for php
-RUN ln -s /usr/bin/${PHP_V} /usr/bin/php
+#RUN ln -s /usr/bin/${PHP_V} /usr/bin/php
 
 # Switch to use a non-root user from here on
 USER docker
