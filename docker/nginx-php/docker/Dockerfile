@@ -104,7 +104,7 @@ COPY config/php.ini /etc/${PHP_V}/conf.d/custom.ini
 COPY config/supervisord.conf /etc/supervisor/conf.d/supervisord.conf
 
 # Make sure files/folders needed by the processes are accessable when they run under the nobody user
-RUN chown -R docker.docker /var/www/html /run /var/lib/nginx /var/log/nginx
+RUN chown -R docker:docker /var/www/html /run /var/lib/nginx /var/log/nginx
 
 # PHP Composer
 COPY --from=composer:latest /usr/bin/composer /usr/local/bin/composer
